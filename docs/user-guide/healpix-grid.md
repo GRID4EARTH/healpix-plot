@@ -35,5 +35,14 @@ cell_ids = np.arange(12 * 4**grid.level, dtype="uint64")
 lon, lat = grid.operations.healpix_to_lonlat(cell_ids, **grid.as_keyword_params())
 ```
 
+```{warning}
+This pattern does **not** work for `indexing_scheme="zuniq"`. `as_keyword_params()`
+always includes `depth=grid.level`, but zuniq cell ids already encode their own
+depth, so `healpix_geo.zuniq.healpix_to_lonlat` does not take a separate `depth`
+argument the way `nested`/`ring` do. For zuniq data, call
+`healpix_geo.zuniq.healpix_to_lonlat` directly instead of going through
+`grid.operations`/`grid.as_keyword_params()`.
+```
+
 For everything else — what levels mean, how indexing schemes differ, ellipsoid support —
 refer to the [healpix-geo documentation](https://healpix-geo.readthedocs.io).

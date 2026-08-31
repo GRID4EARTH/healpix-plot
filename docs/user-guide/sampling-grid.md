@@ -22,10 +22,12 @@ The spatial extent and pixel resolution are inferred automatically from the boun
 
 ## 2. Bounding box (`ParametrizedSamplingGrid.from_bbox`)
 
-Use `SamplingGrid.from_bbox()` to pin the output to a fixed region regardless of the data:
+Use `ParametrizedSamplingGrid.from_bbox()` to pin the output to a fixed region regardless of the data. Note that this is a classmethod of `ParametrizedSamplingGrid`, not of the base `SamplingGrid`:
 
 ```python
-sampling_grid = healpix_plot.SamplingGrid.from_bbox(
+from healpix_plot.sampling_grid import ParametrizedSamplingGrid
+
+sampling_grid = ParametrizedSamplingGrid.from_bbox(
     bbox=(5, 36.0, 13.0, 45.0),  # (lon_min, lat_min, lon_max, lat_max) in degrees
     shape=512,
 )

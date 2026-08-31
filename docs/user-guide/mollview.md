@@ -79,7 +79,7 @@ pip install cartopy
 default), the module works normally. If cartopy is absent and `coastlines=True`,
 a clear `ImportError` is raised with installation instructions.
 
-Python >= 3.10 is required (uses `X | Y` union type hints).
+Python >= 3.11 is required (see `pyproject.toml`; uses `X | Y` union type hints).
 
 ---
 
@@ -90,7 +90,7 @@ Python >= 3.10 is required (uses `X | Y` union type hints).
 ```python
 import numpy as np
 import matplotlib.pyplot as plt
-from mollview import mollview, mollgnomview
+from healpix_plot.mollview import mollview, mollgnomview
 
 # --- Synthetic RING map (depth 5, nside 32) ---
 depth = 5
@@ -339,8 +339,9 @@ mollview(m_nested, nest=True)
 
 ## 7. Ellipsoid support
 
-The `ellipsoid` parameter is forwarded directly to
-`healpix_geo.nested.lonlat_to_healpix`. On a sphere (`ellipsoid="sphere"`,
+The `ellipsoid` parameter is forwarded to `healpix_geo.nested.lonlat_to_healpix`
+or `healpix_geo.ring.lonlat_to_healpix`, depending on whether `nest=True` or
+the default `nest=False` is used. On a sphere (`ellipsoid="sphere"`,
 the default), results are numerically identical to healpy. On a non-spherical
 ellipsoid, the authalic latitude is used for the lon/lat → cell-ID conversion.
 
@@ -539,7 +540,7 @@ import healpy as hp
 hp.mollview(m, title="My map", nest=False, cmap="RdBu_r", unit="K", min=-3, max=3)
 
 # This module — drop-in equivalent
-from mollview import mollview
+from healpix_plot.mollview import mollview
 
 mollview(m, title="My map", nest=False, cmap="RdBu_r", unit="K", vmin=-3, vmax=3)
 ```
@@ -565,7 +566,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 
-from mollview import mollview
+from healpix_plot.mollview import mollview
 import matplotlib.pyplot as plt
 
 mollview(m, title="My map", cmap="RdBu_r")
@@ -597,7 +598,7 @@ mollview(
 
 ```python
 import matplotlib.colors as mcolors
-from mollview import mollview
+from healpix_plot.mollview import mollview
 
 mollview(
     m_positive,
@@ -611,7 +612,7 @@ mollview(
 
 ```python
 import numpy as np
-from mollview import mollview
+from healpix_plot.mollview import mollview
 
 absmax = np.nanpercentile(np.abs(m), 98)
 mollview(
@@ -627,7 +628,7 @@ mollview(
 
 ```python
 import matplotlib.pyplot as plt
-from mollview import mollview
+from healpix_plot.mollview import mollview
 
 fig = plt.figure(figsize=(18, 5), facecolor="black")
 mollview(m1, sub=(1, 2, 1), title="Map A", cmap="plasma", vmin=-3, vmax=3)
@@ -641,7 +642,7 @@ plt.close()
 
 ```python
 import matplotlib.pyplot as plt
-from mollview import mollview, mollgnomview
+from healpix_plot.mollview import mollview, mollgnomview
 
 fig = plt.figure(figsize=(18, 8), facecolor="black")
 mollview(m, sub=(1, 2, 1), title="Full sky", cmap="RdBu_r")

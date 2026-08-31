@@ -4,7 +4,7 @@ This guide explains you how to install healpix-plot on your system.
 
 ## Requirements
 
-- Python **≥ 3.13**
+- Python **≥ 3.11**
 
 ## Install
 
