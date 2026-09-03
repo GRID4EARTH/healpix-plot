@@ -273,9 +273,9 @@ def pcolormesh(
             colorizer = Colorizer(cmap=cmap, norm=norm)
         c_vmin, c_vmax = colorizer.get_clim()
         if c_vmin is None:
-            c_vmin = vmin if vmin is not None else np.min(cell_data)
+            c_vmin = vmin if vmin is not None else np.nanmin(cell_data)
         if c_vmax is None:
-            c_vmax = vmax if vmax is not None else np.max(cell_data)
+            c_vmax = vmax if vmax is not None else np.nanmax(cell_data)
         colorizer.set_clim(c_vmin, c_vmax)
         cmap = colorizer.cmap
         norm = colorizer.norm
