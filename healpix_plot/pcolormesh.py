@@ -1,23 +1,22 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import cartopy.crs as ccrs
 import healpix_geo
 import matplotlib.pyplot as plt
 import numpy as np
 from cartopy.mpl.geoaxes import GeoAxes
-from matplotlib.collections import QuadMesh
 from matplotlib.colorizer import Colorizer
-from matplotlib.colors import Norm
 from matplotlib.transforms import Bbox
 
 from healpix_plot.healpix import HealpixGrid
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
-    from matplotlib.colors import Colormap
+    from matplotlib.collections import QuadMesh
+    from matplotlib.colors import Colormap, Norm
     from numpy.typing import NDArray
 
 
@@ -175,8 +174,6 @@ def _compute_grid(
     grid[:, -1, -1] = vertices[:, -1, -1, 2]
 
     lon, lat = grid[0], grid[1]
-    # Map longitude to [-180, 180]
-    # lon = wrap_longitude(lon)
 
     base_cell = healpix_geo.nested.zoom_to(cell_ids_2d[0, 0], healpix_grid.level, 0)
     if base_cell != 6:
@@ -207,7 +204,7 @@ def pcolormesh(
     norm: Norm | str | None = None,
     colorizer: Colorizer | None = None,
     ax: Axes | None = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> list[QuadMesh]:
     """Plot data using pcolormesh.
 
