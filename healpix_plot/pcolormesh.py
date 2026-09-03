@@ -328,7 +328,7 @@ def pcolormesh(
 
     if any_partial:
         if isinstance(ax, GeoAxes):
-            ax.set_extent((*ax_extent.intervalx, *ax_extent.intervaly))
+            ax.set_extent((*ax_extent.intervalx, *ax_extent.intervaly), crs=ccrs.PlateCarree())
         else:
             ax.dataLim.set_points(ax_extent.get_points())
             ax.autoscale(enable=None)  # type: ignore[arg-type]
