@@ -8,6 +8,7 @@ Main function
    :toctree: generated
 
    healpix_plot.plot
+   healpix_plot.pcolormesh
 
 Low-level function
 ------------------
