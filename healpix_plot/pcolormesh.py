@@ -195,9 +195,9 @@ def _to_sorted(cell_ids: NDArray, cell_data: NDArray) -> tuple[NDArray, NDArray]
 def pcolormesh(
     cell_ids: NDArray,
     cell_data: NDArray,
+    *,
     healpix_grid: HealpixGrid | Mapping,
     level_tile: int | None = None,
-    *,
     vmin: float | None = None,
     vmax: float | None = None,
     cmap: Colormap | str | None = None,
@@ -239,7 +239,7 @@ def pcolormesh(
         The Colorizer object used to map color to data. If None, a Colorizer object is
         created from a norm and cmap.
     ax:
-        Axes instance to plot onto.
+        Axes instance to plot onto. If None, use the current axes.
     kwargs:
         Other arguments passed to `pcolormesh`.
     """
