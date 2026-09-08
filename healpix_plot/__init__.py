@@ -7,8 +7,16 @@ except Exception:  # pragma: no cover
 
 from healpix_plot.ellipsoid import EllipsoidLike
 from healpix_plot.healpix import HealpixGrid
+from healpix_plot.pcolormesh import pcolormesh
 from healpix_plot.plotting import plot
 from healpix_plot.resampling import resample
 from healpix_plot.sampling_grid import SamplingGrid
 
-__all__ = ["HealpixGrid", "plot", "resample", "SamplingGrid", "EllipsoidLike"]
+__all__ = [
+    "EllipsoidLike",
+    "HealpixGrid",
+    "SamplingGrid",
+    "pcolormesh",
+    "plot",
+    "resample",
+]
