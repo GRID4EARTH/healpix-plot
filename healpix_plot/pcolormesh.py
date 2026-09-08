@@ -34,7 +34,9 @@ def find_extent(cell_ids: NDArray, healpix_grid: HealpixGrid) -> Bbox:
     All cells should be in the same base cell (level 0).
     """
     lon, lat = np.stack(
-        healpix_geo.nested.healpix_to_lonlat(cell_ids, **healpix_grid.as_keyword_params()),
+        healpix_geo.nested.healpix_to_lonlat(
+            cell_ids, **healpix_grid.as_keyword_params()
+        ),
         axis=0,
     )
     base_cell = healpix_geo.nested.zoom_to(cell_ids[0], healpix_grid.level, 0)
@@ -61,7 +63,9 @@ def find_extent(cell_ids: NDArray, healpix_grid: HealpixGrid) -> Bbox:
     )
 
 
-def _find_tiles(cell_ids: NDArray, level: int, level_tile: int) -> tuple[NDArray, NDArray]:
+def _find_tiles(
+    cell_ids: NDArray, level: int, level_tile: int
+) -> tuple[NDArray, NDArray]:
     """Find tile ids and splits to select them."""
     cell_tile_ids = healpix_geo.nested.zoom_to(cell_ids, level, level_tile)
     tile_ids, tile_splits = np.unique(cell_tile_ids, return_index=True)
@@ -104,7 +108,10 @@ def _fill_tile(
     # If only RGB, add alpha channel
     if cell_colors_partial.shape[1] == 3:
         cell_colors_partial = np.hstack(
-            [cell_colors_partial, np.ones([cell_colors_partial.shape[0], 1], dtype=color_dtype)]
+            [
+                cell_colors_partial,
+                np.ones([cell_colors_partial.shape[0], 1], dtype=color_dtype),
+            ]
         )
 
     colors = np.ones((n_cells, cell_colors_partial.shape[1]), dtype=color_dtype)
@@ -266,7 +273,9 @@ def pcolormesh(
     if level_tile is None:
         level_tile = max(0, level - 11)
     if level_tile >= level:
-        raise ValueError(f"Tile level ({level_tile}) should be coarser than data level ({level})")
+        raise ValueError(
+            f"Tile level ({level_tile}) should be coarser than data level ({level})"
+        )
 
     if ax is None:
         ax = plt.gca()
@@ -335,7 +344,9 @@ def pcolormesh(
 
     if any_partial:
         if isinstance(ax, GeoAxes):
-            ax.set_extent((*ax_extent.intervalx, *ax_extent.intervaly), crs=ccrs.PlateCarree())
+            ax.set_extent(
+                (*ax_extent.intervalx, *ax_extent.intervaly), crs=ccrs.PlateCarree()
+            )
         else:
             ax.dataLim.set_points(ax_extent.get_points())
             ax.autoscale(enable=None)  # type: ignore[arg-type]
