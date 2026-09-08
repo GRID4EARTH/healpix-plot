@@ -210,21 +210,28 @@ def pcolormesh(
 
     In nested indexing, data from the same parent cell can easily be reindexed in 2D.
     This function takes advantage of this to chunk data into larger tiles and plot each
-    one of them with a :func:`~matplotlib.pyplot.pcolormesh` call.
+    one of them with a :func:`~matplotlib.pyplot.pcolormesh` call. If a tile is
+    incomplete, cells missing in the input data will be plotted as transparent.
+
+    The cell boundaries are plotted as quadrilaterals, which is untrue for high
+    latitudes and low levels. In that case, it may be more appropriate to use
+    :func:`.plot`.
 
     Parameters
     ----------
     cell_ids:
         The cell ids describing the spatial position of the data.
     cell_data:
-        The data to plot with shapes:
+        The data to plot. Supported shapes are:
+
         - (N): Scalar data mapped to colors
         - (N, 3): RGB values (0-1 float)
         - (N, 4): RGBA values (0-1 float)
     healpix_grid:
-        Object or dictionnary giving parameters of the input data Healpix grid.
+        Object or dictionnary giving parameters of the input data Healpix grid. Only
+        the nested indexing scheme is supported.
     level_tile:
-        Healpix level/depth of tiles. If left to None, will default to `level - 11`,
+        Healpix level/depth of tiles. If left to None, will default to ``level - 11``,
         giving tiles of size 2048 x 2048.
     vmin, vmax:
         When no explicit norm is passed, `vmin` and `vmax` will be used to define the
@@ -237,7 +244,7 @@ def pcolormesh(
         colors. See documentation of :func:`~matplotlib.pyplot.pcolormesh` for details.
     colorizer:
         The Colorizer object used to map color to data. If None, a Colorizer object is
-        created from a norm and cmap.
+        created from a `norm` and `cmap`.
     ax:
         Axes instance to plot onto. If None, use the current axes.
     kwargs:
