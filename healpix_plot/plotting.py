@@ -36,7 +36,7 @@ class HEALPix(ccrs.Projection):
     central_longitude : float, default: 0.0
         The central meridian (``lon_0``). Only multiples of 90° line up with
         the HEALPix cells.
-    ellipsoid : ellipsoid-like, default: "sphere"
+    ellipsoid : str, dict or object, default: "sphere"
         The reference ellipsoid, resolved like ``HealpixGrid.ellipsoid``. Pass
         the same ellipsoid as the data for the cells to be squares.
     """

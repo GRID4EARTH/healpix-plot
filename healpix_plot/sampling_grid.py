@@ -179,16 +179,16 @@ class AffineSamplingGrid(SamplingGrid):
         ``transform * (col + 0.5, row + 0.5)``.
     shape : tuple of int
         ``(height, width)``, i.e. ``(rows, cols)``, like a raster.
-    crs : CRS-like, optional
-        The coordinate reference system of ``transform``, as anything accepted
-        by :py:meth:`pyproj.CRS.from_user_input` (a :py:class:`pyproj.CRS`, a
-        PROJ string, an EPSG code, a rasterio CRS ...). ``None`` means
-        geographic coordinates (longitude / latitude in degrees).
+    crs : pyproj.crs.CRS or str, optional
+        The coordinate reference system of ``transform``: anything accepted by
+        :py:meth:`pyproj.crs.CRS.from_user_input` (a PROJ string, a WKT string, an
+        EPSG code, a rasterio CRS ...). ``None`` means geographic coordinates
+        (longitude / latitude in degrees).
 
     See Also
     --------
-    AffineSamplingGrid.from_raster : the grid of an existing raster
-    AffineSamplingGrid.from_healpix : the lossless grid in ``+proj=healpix``
+    healpix_plot.sampling_grid.AffineSamplingGrid.from_raster : the grid of an existing raster
+    healpix_plot.sampling_grid.AffineSamplingGrid.from_healpix : the lossless grid in ``+proj=healpix``
     """
 
     transform: Affine
@@ -220,7 +220,7 @@ class AffineSamplingGrid(SamplingGrid):
 
         Parameters
         ----------
-        raster : rasterio dataset or xarray object with the ``rio`` accessor
+        raster : rasterio.io.DatasetReader or xarray.DataArray
             Anything with ``transform``, ``height``, ``width`` and ``crs``
             attributes (an open :py:class:`rasterio.io.DatasetReader`), or an
             :py:class:`xarray.DataArray` / :py:class:`xarray.Dataset` with the
@@ -321,7 +321,7 @@ class ConcreteSamplingGrid:
         of ``crs`` (degrees of longitude / latitude if ``crs`` is ``None``).
     extent_x, extent_y : tuple of float
         The outer edges (or bounding box) of the grid along each axis.
-    crs : pyproj.CRS, optional
+    crs : pyproj.crs.CRS, optional
         The coordinate reference system of ``x`` and ``y``. ``None`` means
         geographic coordinates.
     transform : affine.Affine, optional

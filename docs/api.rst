@@ -26,7 +26,6 @@ Classes
    :toctree: generated
 
    healpix_plot.HealpixGrid
-   healpix_plot.HEALPix
    healpix_plot.sampling_grid.ParametrizedSamplingGrid
    healpix_plot.sampling_grid.AffineSamplingGrid
    healpix_plot.sampling_grid.ConcreteSamplingGrid
@@ -36,6 +35,8 @@ Projection and rasters
 
 Helpers for PROJ's ellipsoidal HEALPix projection, and for exchanging
 resampled images with georeferenced rasters (GeoTIFF via rioxarray).
+
+.. autoclass:: healpix_plot.HEALPix
 
 .. autosummary::
    :toctree: generated

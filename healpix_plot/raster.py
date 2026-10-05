@@ -49,16 +49,16 @@ def to_dataarray(
     WKT (``healpix_crs_wkt``) and the grid parameters (``healpix_depth``,
     ``healpix_indexing_scheme``, ``healpix_ellipsoid``): GeoTIFF cannot encode
     the HEALPix projection in its GeoKeys, so GDAL stores the CRS in a
-    ``<file>.aux.xml`` side-car, and :py:meth:`AffineSamplingGrid.from_raster`
-    falls back to the tag when that side-car is missing.
+    ``<file>.aux.xml`` side-car, and
+    :py:meth:`healpix_plot.sampling_grid.AffineSamplingGrid.from_raster` falls back to the tag when that side-car is missing.
 
     Parameters
     ----------
     image : numpy.ndarray
         The image returned by :py:func:`healpix_plot.resample`.
-    target_grid : ConcreteSamplingGrid
+    target_grid : healpix_plot.sampling_grid.ConcreteSamplingGrid
         The resolved sampling grid returned together with the image.
-    healpix_grid : HealpixGrid
+    healpix_grid : healpix_plot.HealpixGrid
         The source grid; its ellipsoid defines the geographic CRS of
         unprojected sampling grids.
     """
@@ -107,16 +107,17 @@ def raster_cell_ids(raster, healpix_grid: HealpixGrid) -> np.ma.MaskedArray:
 
     Parameters
     ----------
-    raster : rasterio dataset or xarray object with the ``rio`` accessor
-        See :py:meth:`AffineSamplingGrid.from_raster`.
-    healpix_grid : HealpixGrid
+    raster : rasterio.io.DatasetReader or xarray.DataArray
+        An open rasterio dataset or an xarray object with the ``rio`` accessor,
+        see :py:meth:`healpix_plot.sampling_grid.AffineSamplingGrid.from_raster`.
+    healpix_grid : healpix_plot.HealpixGrid
         The grid to express the pixel positions in.
 
     Returns
     -------
     cell_ids : numpy.ma.MaskedArray
         One cell id per pixel; pixels off the globe are masked. For a raster
-        written on :py:meth:`AffineSamplingGrid.from_healpix`, this recovers
+        written on :py:meth:`healpix_plot.sampling_grid.AffineSamplingGrid.from_healpix`, this recovers
         the original cell ids exactly.
     """
     grid = AffineSamplingGrid.from_raster(raster)
