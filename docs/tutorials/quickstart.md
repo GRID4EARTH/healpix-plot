@@ -112,7 +112,7 @@ ax.gridlines(draw_labels="y")
 
 ## 3 — `AffineSamplingGrid.from_transform` — pixel-aligned grid
 
-Use `AffineSamplingGrid` when the output pixels must align exactly with a reference raster (e.g. a GeoTIFF). The affine transform maps pixel indices to geographic coordinates: `Affine(pixel_width, 0, lon_min, 0, -pixel_height, lat_max)`.
+Use `AffineSamplingGrid` when the output pixels must align exactly with a reference raster (e.g. a GeoTIFF). The affine transform maps pixel indices to the coordinates of the pixel's outer corner, as in rasterio / GDAL: `Affine(pixel_width, 0, lon_min, 0, -pixel_height, lat_max)`; the shape is `(height, width)`. Pass `crs=` to sample in a projected coordinate system, or use `AffineSamplingGrid.from_raster()` to take the grid of an existing raster (see {doc}`../user-guide/sampling-grid`).
 
 Here we define a 0.01°/pixel grid (~1 km) over Corsica.
 
