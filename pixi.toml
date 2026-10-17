@@ -24,6 +24,10 @@ affine = "*"
 [feature.test.dependencies]
 pytest = "*"
 pytest-cov = "*"
+pyproj = "*"
+rasterio = "*"
+rioxarray = "*"
+xarray = "*"
 
 [feature.py313.dependencies]
 python = "3.13.*"
@@ -65,4 +69,6 @@ isort = "*"
 
 [environments]
 default = ["test", "dev", "affine", "py314"]
+test-py313 = ["test", "affine", "py313"]
+test-py314 = ["test", "affine", "py314"]
 docs = ["docs", "py313"]
