@@ -49,7 +49,7 @@ from healpix_plot.healpix import HealpixGrid
         pytest.param(
             None,
             None,
-            (7, 5),
+            (5, 7),
             None,
             (10.0, 10.0),
             (1.875, 3.590377890729141),
@@ -157,7 +157,7 @@ class TestParametrizedSamplingGrid:
         ["bbox", "shape", "expected_resolution", "expected_center"],
         (
             ((0, 0, 5, 5), 10, (5 / 9, 5 / 9), (2.5, 2.5)),
-            ((0, -5, 10, 15), (11, 21), (1.0, 1.0), (5, 5)),
+            ((0, -5, 10, 15), (21, 11), (1.0, 1.0), (5, 5)),
         ),
     )
     def test_from_bbox(self, bbox, shape, expected_resolution, expected_center):
@@ -182,7 +182,7 @@ class TestParametrizedSamplingGrid:
                 )[::-1, ...],
             ),
             pytest.param(
-                (7, 5),
+                (5, 7),
                 (0.5, 0.5),
                 (180, 0),
                 np.stack(
@@ -194,7 +194,7 @@ class TestParametrizedSamplingGrid:
                 )[::-1, ...],
             ),
             pytest.param(
-                (15, 7),
+                (7, 15),
                 (0.5, 1.2),
                 (9.5, 10.0),
                 np.stack(
@@ -237,6 +237,7 @@ class TestParametrizedSamplingGrid:
         )
         actual = grid.resolve(cell_ids, params)
         expected_y, expected_x = expected
+        assert actual.shape == shape
         np.testing.assert_allclose(actual.x, expected_x)
         np.testing.assert_allclose(actual.y, expected_y)
 
@@ -343,12 +344,13 @@ class TestAffineSamplingGrid:
         np.testing.assert_equal(actual.lon, actual.x)
         np.testing.assert_equal(actual.lat, actual.y)
 
-    def test_pixel_indices(self):
+    @pytest.mark.parametrize("west", [-180, 0])
+    def test_pixel_indices(self, west):
         healpix_grid = HealpixGrid(
             level=1, indexing_scheme="nested", ellipsoid="sphere"
         )
-        # 1° pixels, north-up, covering the globe
-        grid = sg.AffineSamplingGrid(Affine(1, 0, -180, 0, -1, 90), (180, 360))
+        # 1° pixels, north-up, covering the globe from `west`
+        grid = sg.AffineSamplingGrid(Affine(1, 0, west, 0, -1, 90), (180, 360))
         cell_ids = np.arange(48, dtype="uint64")
 
         rows, cols = grid.pixel_indices(cell_ids, healpix_grid)
@@ -357,7 +359,10 @@ class TestAffineSamplingGrid:
             cell_ids, **healpix_grid.as_keyword_params()
         )
         np.testing.assert_equal(rows, np.floor(90 - lat))
-        np.testing.assert_equal(cols, np.floor(lon + 180))
+        np.testing.assert_equal(cols, np.floor((lon - west) % 360))
+        # every cell centre lies on the global grid, in the pixel of that cell
+        resolved = grid.resolve(None, healpix_grid).cell_ids(healpix_grid)
+        np.testing.assert_equal(resolved[rows, cols], cell_ids)
 
     def test_from_raster(self, tmp_path):
         rasterio = pytest.importorskip("rasterio")

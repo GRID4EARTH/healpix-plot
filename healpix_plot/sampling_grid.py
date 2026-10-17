@@ -21,7 +21,8 @@ class SamplingGridParameters(TypedDict):
     Parameters
     ----------
     shape : int or tuple of int, default: 1024
-        The shape of the array. If a int, the shape is a square of equal size.
+        The shape of the array as ``(height, width)``, i.e. in the same order
+        as the resulting image. If an int, the grid is a square of that size.
     resolution : float or tuple of float, optional
         The resolution or step size of the sampling grid. If a float, expands to
         a 2-tuple of equal values. If missing, derived from the spatial extent
@@ -78,7 +79,7 @@ def _infer_parameters(
             center = (np.mean(lon).item(), np.mean(lat).item())
 
         if resolution is None:
-            size_x, size_y = shape
+            size_y, size_x = shape
             min_x, max_x = np.min(lon).item(), np.max(lon).item()
             min_y, max_y = np.min(lat).item(), np.max(lat).item()
 
@@ -127,9 +128,10 @@ class ParametrizedSamplingGrid:
 
         center = (float(np.mean([xmin, xmax])), float(np.mean([ymin, ymax])))
 
+        height, width = shape
         resolution = (
-            (xmax - xmin) / (shape[0] - 1),
-            (ymax - ymin) / (shape[1] - 1),
+            (xmax - xmin) / (width - 1),
+            (ymax - ymin) / (height - 1),
         )
 
         return cls(shape=shape, center=center, resolution=resolution)
@@ -139,7 +141,7 @@ class ParametrizedSamplingGrid:
     ) -> ConcreteSamplingGrid:
         shape, resolution, center = _infer_parameters(self, cell_ids, parameters)
 
-        size_x, size_y = shape
+        size_y, size_x = shape
         resolution_x, resolution_y = resolution
         half_x = size_x // 2
         half_y = size_y // 2
@@ -278,7 +280,9 @@ class AffineSamplingGrid(SamplingGrid):
         lon = np.asarray(lon, dtype="float64")
         lat = np.asarray(lat, dtype="float64")
         if self.is_geographic:
-            x, y = lon, lat
+            # healpix-geo returns longitudes in [0, 360): wrap them to the grid
+            (west, _), _ = self._extent()
+            x, y = (lon - west) % 360.0 + west, lat
         else:
             import pyproj
 
@@ -290,20 +294,26 @@ class AffineSamplingGrid(SamplingGrid):
         cols, rows = apply_transform(~self.transform, x, y)
         return np.floor(rows).astype("int64"), np.floor(cols).astype("int64")
 
+    def _extent(self) -> tuple[tuple[float, float], tuple[float, float]]:
+        """the bounding box of the grid's outer corners, per axis"""
+        height, width = self.shape
+        corner_x, corner_y = apply_transform(
+            self.corner_transform,
+            np.array([0, width, 0, width]),
+            np.array([0, 0, height, height]),
+        )
+        return (
+            (float(corner_x.min()), float(corner_x.max())),
+            (float(corner_y.min()), float(corner_y.max())),
+        )
+
     def resolve(
         self, cell_ids: np.ndarray, parameters: HealpixGrid
     ) -> ConcreteSamplingGrid:
         height, width = self.shape
         rows, cols = np.meshgrid(np.arange(height), np.arange(width), indexing="ij")
         x, y = apply_transform(self.center_transform, cols, rows)
-
-        corner_x, corner_y = apply_transform(
-            self.corner_transform,
-            np.array([0, width, 0, width]),
-            np.array([0, 0, height, height]),
-        )
-        extent_x = (float(corner_x.min()), float(corner_x.max()))
-        extent_y = (float(corner_y.min()), float(corner_y.max()))
+        extent_x, extent_y = self._extent()
 
         return ConcreteSamplingGrid(
             x, y, extent_x, extent_y, crs=self.crs, transform=self.transform

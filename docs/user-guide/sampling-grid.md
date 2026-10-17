@@ -8,17 +8,19 @@ Three ways to define the target raster:
 
 Pass a dict to `sampling_grid`. Recognised keys:
 
-| Key          | Default  | Description                                                                           |
-| ------------ | -------- | ------------------------------------------------------------------------------------- |
-| `shape`      | `1024`   | Output array size. An `int` produces a square grid; a 2-tuple sets `(width, height)`. |
-| `resolution` | inferred | Step size in degrees. A `float` expands to equal x/y steps.                           |
-| `center`     | inferred | `(lon, lat)` centre of the grid in degrees.                                           |
+| Key          | Default  | Description                                                                          |
+| ------------ | -------- | ------------------------------------------------------------------------------------ |
+| `shape`      | `1024`   | Output array shape. An `int` produces a square grid; a 2-tuple is `(height, width)`. |
+| `resolution` | inferred | Step size in degrees. A `float` expands to equal x/y steps.                          |
+| `center`     | inferred | `(lon, lat)` centre of the grid in degrees.                                          |
 
 ```python
-sampling_grid = {"shape": (2048, 1024), "center": (0.0, 0.0)}
+sampling_grid = {"shape": (1024, 2048), "center": (0.0, 0.0)}
 ```
 
 The spatial extent and pixel resolution are inferred automatically from the bounding box of your `cell_ids`.
+
+All sampling grids take `shape` in the same order as the array they produce, `(height, width)` like numpy and rasterio; `resolution` and `center` are `(x, y)` like coordinates.
 
 ## 2. Bounding box (`ParametrizedSamplingGrid.from_bbox`)
 

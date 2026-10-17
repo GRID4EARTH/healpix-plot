@@ -15,7 +15,7 @@ def test_to_dataarray_axis_aligned():
     cell_ids = np.arange(12 * 4**2, dtype="uint64")
     data = np.ones(cell_ids.size)
 
-    grid = ParametrizedSamplingGrid.from_bbox((-20, -10, 20, 10), shape=(9, 5))
+    grid = ParametrizedSamplingGrid.from_bbox((-20, -10, 20, 10), shape=(5, 9))
     target, image = resample(
         cell_ids,
         data,
