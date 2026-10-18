@@ -29,13 +29,13 @@ def nearest_neighbour_resampling(
     params: HealpixGrid,
     background_value: float,
 ) -> (np.ndarray, np.ndarray):
-    target_cell_ids = params.operations.lonlat_to_healpix(
-        np.reshape(target_grid.x, -1),
-        np.reshape(target_grid.y, -1),
-        **params.as_keyword_params(),
-    )
+    # cell ids of the pixel centres; pixels off the globe (possible for
+    # projected grids) are masked and stay at the background value
+    target_cell_ids = target_grid.cell_ids(params)
+    flat_ids = np.reshape(np.ma.getdata(target_cell_ids), -1)
+    on_globe = ~np.reshape(np.ma.getmaskarray(target_cell_ids), -1)
 
-    raw_shape = (target_cell_ids.size,)
+    raw_shape = (flat_ids.size,)
     shape = target_grid.shape
     if is_rgb(data):
         raw_shape += data.shape[-1:]
@@ -45,9 +45,8 @@ def nearest_neighbour_resampling(
     #
     # searchsorted(a, b) returns insert indices that insert a into b, not search
     # values from a in b. We thus need to mask all target cell ids not in the source.
-    valid = np.isin(target_cell_ids, source_cell_ids)
-    indices = np.searchsorted(source_cell_ids, target_cell_ids, side="left")
-    valid_indices = indices[valid]
+    valid = on_globe & np.isin(flat_ids, source_cell_ids)
+    valid_indices = np.searchsorted(source_cell_ids, flat_ids[valid], side="left")
 
     # actual interpolation
     image = np.full(raw_shape, fill_value=background_value)

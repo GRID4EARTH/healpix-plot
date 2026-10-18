@@ -93,6 +93,10 @@ intersphinx_mapping = {
     "numpy": ("https://numpy.org/doc/stable/", None),
     "matplotlib": ("https://matplotlib.org/stable/", None),
     "cartopy": ("https://scitools.org.uk/cartopy/docs/v0.22/", None),
+    "xarray": ("https://docs.xarray.dev/en/stable/", None),
+    "pyproj": ("https://pyproj4.github.io/pyproj/stable/", None),
+    "rasterio": ("https://rasterio.readthedocs.io/en/stable/", None),
+    "affine": ("https://affine.readthedocs.io/en/latest/", None),
 }
 
 # Suppress warnings for unresolvable cross-references (dataclass attributes,
