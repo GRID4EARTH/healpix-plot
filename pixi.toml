@@ -65,4 +65,6 @@ isort = "*"
 
 [environments]
 default = ["test", "dev", "affine", "py314"]
+test-py313 = ["test", "affine", "py313"]
+test-py314 = ["test", "affine", "py314"]
 docs = ["docs", "py313"]
