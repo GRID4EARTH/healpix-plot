@@ -39,8 +39,8 @@ def to_dataarray(
 ) -> xr.DataArray:
     """Wrap a resampled image into a georeferenced :py:class:`xarray.DataArray`.
 
-    The result has ``y`` and ``x`` dimensions (plus ``band`` for RGB(A)
-    images). With ``rioxarray`` installed, the CRS and the affine transform are
+    The result has ``y`` and ``x`` dimensions; RGB(A) images come out as
+    ``(band, y, x)``, the order rioxarray expects. With ``rioxarray`` installed, the CRS and the affine transform are
     written with the ``rio`` accessor, so ``result.rio.to_raster(path)``
     produces a GeoTIFF; otherwise they are stored as the ``crs_wkt`` and
     ``transform`` attributes.
@@ -64,13 +64,18 @@ def to_dataarray(
     """
     import xarray as xr
 
-    dims = ("y", "x") + (("band",) if image.ndim == 3 else ())
     height, width = target_grid.shape[:2]
     if target_grid.is_axis_aligned:
         coords = {"x": target_grid.x[0, :], "y": target_grid.y[:, 0]}
     else:
         # rotated pixels have no 1D coordinates; the transform carries the geolocation
         coords = {"x": np.arange(width), "y": np.arange(height)}
+    if image.ndim == 3:
+        image = np.moveaxis(image, -1, 0)
+        dims = ("band", "y", "x")
+        coords["band"] = np.arange(1, image.shape[0] + 1)
+    else:
+        dims = ("y", "x")
 
     crs = target_grid.crs
     if crs is None:

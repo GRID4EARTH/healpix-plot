@@ -206,6 +206,15 @@ class AffineSamplingGrid(SamplingGrid):
             import pyproj
 
             self.crs = pyproj.CRS.from_user_input(self.crs)
+            # healpix-geo expects Greenwich-based longitudes, and converting
+            # a CRS to its own `geodetic_crs` keeps its prime meridian
+            prime_meridian = self.crs.prime_meridian
+            if prime_meridian is not None and prime_meridian.longitude != 0:
+                raise ValueError(
+                    f"unsupported prime meridian {prime_meridian.name!r}"
+                    f" ({prime_meridian.longitude}°): only Greenwich-based CRSs"
+                    " are supported"
+                )
 
     @classmethod
     def from_transform(
@@ -371,12 +380,26 @@ class ConcreteSamplingGrid:
 
     @property
     def extent(self):
-        """``(xmin, xmax, ymin, ymax)``, as the ``extent`` argument of ``imshow``"""
+        """``(left, right, bottom, top)``, as the ``extent`` argument of ``imshow``
+
+        For axis-aligned transforms the order of each pair follows the
+        direction of the transform, so that ``imshow`` places the columns and
+        rows where the transform puts them (``left > right`` for a westward
+        raster).
+        """
         if self.transform is None:
             extent_x = tuple((x + 180) % 360 - 180 for x in self.extent_x)
-        else:
-            extent_x = tuple(self.extent_x)
-        return extent_x + tuple(self.extent_y)
+            return extent_x + tuple(self.extent_y)
+        if not self.is_axis_aligned:
+            return tuple(self.extent_x) + tuple(self.extent_y)
+
+        height, width = self.shape[:2]
+        (left, right), (top, bottom) = apply_transform(
+            self.transform, np.array([0, width]), np.array([0, height])
+        )
+        if self.origin == "lower":
+            bottom, top = top, bottom
+        return (float(left), float(right), float(bottom), float(top))
 
     @cached_property
     def _lonlat(self) -> tuple[np.ndarray, np.ndarray]:

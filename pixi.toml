@@ -19,7 +19,7 @@ jupyterlab = ">=4.5.5,<5"
 healpix-plot = { path = ".", editable = true }
 
 [feature.affine.dependencies]
-affine = "*"
+affine = ">=3"
 
 [feature.test.dependencies]
 pytest = "*"

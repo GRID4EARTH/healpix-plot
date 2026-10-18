@@ -99,3 +99,31 @@ def test_geotiff_roundtrip(tmp_path):
     np.testing.assert_equal(ids3, ids)
     reopened = rioxarray.open_rasterio(path).squeeze("band", drop=True)
     assert AffineSamplingGrid.from_raster(reopened).crs == grid.crs
+
+
+def test_to_dataarray_rgb_band_first(tmp_path):
+    pytest.importorskip("xarray")
+    pytest.importorskip("pyproj")
+
+    healpix_grid = HealpixGrid(level=1, indexing_scheme="nested", ellipsoid="sphere")
+    cell_ids = np.arange(12 * 4, dtype="uint64")
+    rgb = np.stack([cell_ids / 48, 1 - cell_ids / 48, np.full(48, 0.5)], axis=1)
+
+    grid = AffineSamplingGrid.from_healpix(healpix_grid)
+    target, image = resample(
+        cell_ids,
+        rgb,
+        sampling_grid=grid,
+        healpix_grid=healpix_grid,
+        interpolation="nearest",
+        agg="first",
+    )
+    assert image.shape == grid.shape + (3,)
+
+    arr = to_dataarray(image, target, healpix_grid)
+    assert arr.dims == ("band", "y", "x")
+    np.testing.assert_equal(arr.band.values, [1, 2, 3])
+    np.testing.assert_equal(arr.values, np.moveaxis(image, -1, 0))
+
+    pytest.importorskip("rioxarray")
+    arr.rio.to_raster(tmp_path / "rgb.tif")

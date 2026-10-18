@@ -364,6 +364,31 @@ class TestAffineSamplingGrid:
         resolved = grid.resolve(None, healpix_grid).cell_ids(healpix_grid)
         np.testing.assert_equal(resolved[rows, cols], cell_ids)
 
+    def test_rejects_non_greenwich_prime_meridian(self):
+        pytest.importorskip("pyproj")
+        with pytest.raises(ValueError, match="prime meridian"):
+            sg.AffineSamplingGrid(
+                Affine.identity(), (2, 2), crs="+proj=longlat +ellps=WGS84 +pm=paris"
+            )
+
+    @pytest.mark.parametrize(
+        ["transform", "expected"],
+        (
+            pytest.param(
+                Affine(10, 0, -20, 0, -10, 20), (-20, 20, -20, 20), id="north-up"
+            ),
+            pytest.param(
+                Affine(-10, 0, 20, 0, -10, 20), (20, -20, -20, 20), id="westward"
+            ),
+            pytest.param(
+                Affine(10, 0, -20, 0, 10, -20), (-20, 20, -20, 20), id="south-up"
+            ),
+        ),
+    )
+    def test_extent_keeps_axis_direction(self, transform, expected):
+        grid = sg.AffineSamplingGrid(transform, (4, 4)).resolve(None, None)
+        assert grid.extent == pytest.approx(expected)
+
     def test_from_raster(self, tmp_path):
         rasterio = pytest.importorskip("rasterio")
         pyproj = pytest.importorskip("pyproj")

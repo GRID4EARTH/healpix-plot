@@ -107,3 +107,45 @@ def test_plot_cell_aligned_grid(healpix_data, projection):
     # the whole globe is covered
     mappable.axes.coastlines()
     mappable.figure.canvas.draw()
+
+
+@pytest.mark.parametrize("projection", ["HEALPix", "Mollweide"])
+def test_plot_cropped_cell_aligned_grid_at_antimeridian(projection):
+    pytest.importorskip("pyproj")
+    healpix_grid = HealpixGrid(level=3, indexing_scheme="nested", ellipsoid="WGS84")
+    # base cell 6 straddles the antimeridian, so the bounding box of its
+    # rotated grid reaches outside the projection's domain
+    cell_ids = np.arange(6 * 4**3, 7 * 4**3, dtype="uint64")
+    data = cell_ids.astype("float64")
+
+    grid = AffineSamplingGrid.from_healpix(healpix_grid, cell_ids)
+    mappable = plot(
+        cell_ids,
+        data,
+        healpix_grid=healpix_grid,
+        sampling_grid=grid,
+        projection=projection,
+    )
+    assert isinstance(mappable, matplotlib.collections.QuadMesh)
+    limits = mappable.axes.get_xlim() + mappable.axes.get_ylim()
+    assert np.all(np.isfinite(limits))
+    mappable.figure.canvas.draw()
+
+
+def test_plot_scalar_image_with_rgb_like_width(healpix_data):
+    pytest.importorskip("pyproj")
+    healpix_grid, _, _ = healpix_data
+    # 16 nested cells form a (4, 4) scalar image on the cell-aligned grid,
+    # which must not be mistaken for a (cells, channels) RGB(A) array
+    cell_ids = np.arange(64, 80, dtype="uint64")
+    data = cell_ids.astype("float64")
+
+    grid = AffineSamplingGrid.from_healpix(healpix_grid, cell_ids)
+    mappable = plot(
+        cell_ids,
+        data,
+        healpix_grid=healpix_grid,
+        sampling_grid=grid,
+        projection="HEALPix",
+    )
+    assert isinstance(mappable, matplotlib.collections.QuadMesh)

@@ -9,7 +9,7 @@ import shapely.geometry as sgeom
 
 from healpix_plot.healpix import HealpixGrid
 from healpix_plot.projection import resolve_ellipsoid
-from healpix_plot.resampling import is_rgb, resample
+from healpix_plot.resampling import resample
 from healpix_plot.sampling_grid import ParametrizedSamplingGrid
 
 if TYPE_CHECKING:
@@ -106,6 +106,30 @@ def _data_crs(target_grid, ax=None) -> ccrs.CRS:
     if ax is not None and getattr(ax, "projection", None) == projection:
         return ax.projection
     return projection
+
+
+def _set_extent_from_pixels(ax, target_grid, data_crs) -> None:
+    """zoom the axes to the pixels that lie on the globe
+
+    The bounding box of a projected grid can reach outside the projection's
+    domain (for instance a cell-aligned grid cropped to cells on the
+    antimeridian), and cartopy cannot transform such a rectangle. The corners
+    of the valid pixels, however, are all on the globe.
+    """
+    valid = target_grid.valid
+    if not valid.any():
+        return
+    corner_x, corner_y = target_grid.corners()
+    # a corner counts if any of the (up to four) pixels around it is valid
+    padded = np.pad(valid, 1)
+    corner_valid = padded[:-1, :-1] | padded[:-1, 1:] | padded[1:, :-1] | padded[1:, 1:]
+    points = ax.projection.transform_points(
+        data_crs, corner_x[corner_valid], corner_y[corner_valid]
+    )
+    finite = np.isfinite(points[:, 0]) & np.isfinite(points[:, 1])
+    x, y = points[finite, 0], points[finite, 1]
+    ax.set_xlim(x.min(), x.max())
+    ax.set_ylim(y.min(), y.max())
 
 
 def plot(
@@ -248,10 +272,12 @@ def plot(
         ax.set_global()
     elif view is not None:
         ax.set_extent(view, crs=ccrs.PlateCarree())
-    else:
+    elif target_grid.is_geographic:
         # set extent before plotting for a smoother image
         # See https://github.com/SciTools/cartopy/issues/1468
         ax.set_extent(target_grid.extent, crs=data_crs)
+    else:
+        _set_extent_from_pixels(ax, target_grid, data_crs)
 
     if target_grid.is_axis_aligned:
         mappable = ax.imshow(
@@ -269,7 +295,7 @@ def plot(
     else:
         # rotated pixels (e.g. the cell-aligned grid in `+proj=healpix`)
         # cannot be drawn with `imshow`
-        if is_rgb(image):
+        if image.ndim == 3:
             raise NotImplementedError(
                 "RGB(A) images on rotated sampling grids are not supported"
             )
