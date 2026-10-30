@@ -1,91 +1,162 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from collections.abc import Mapping
+from typing import Any, Literal
 
+import healpix_geo.auto
 import numpy as np
 import numpy_groupies
+from healpix_geo.auto import Grid
+from numpy.typing import NDArray
 
-from healpix_plot.sampling_grid import ParametrizedSamplingGrid
+from healpix_plot.sampling_grid import (
+    BoxSamplingGrid,
+    BoxSamplingGridDict,
+    ConcreteSamplingGrid,
+    SamplingGrid,
+)
 
-if TYPE_CHECKING:
-    from typing import Literal
-
-    from healpix_plot.healpix import HealpixGrid
-    from healpix_plot.sampling_grid import (
-        ConcreteSamplingGrid,
-        SamplingGrid,
-        SamplingGridParameters,
-    )
-
-
-def is_rgb(x):
-    return x.ndim == 2 and x.shape[-1] in (3, 4)
+AggType = Literal["mean", "median", "std", "var", "min", "max", "first", "last"]
 
 
-def nearest_neighbour_resampling(
-    data: np.ndarray,
-    target_grid: ConcreteSamplingGrid,
-    source_cell_ids: np.ndarray,
-    params: HealpixGrid,
-    background_value: float,
-) -> (np.ndarray, np.ndarray):
-    target_cell_ids = params.operations.lonlat_to_healpix(
-        np.reshape(target_grid.x, -1),
-        np.reshape(target_grid.y, -1),
-        **params.as_keyword_params(),
-    )
+class Interpolator:
+    """Abstract class for interpolating data from HEALPix to regular grid."""
 
-    raw_shape = (target_cell_ids.size,)
-    shape = target_grid.shape
-    if is_rgb(data):
-        raw_shape += data.shape[-1:]
-        shape += data.shape[-1:]
+    def __init__(
+        self,
+        cell_ids: NDArray[np.integer],
+        healpix_grid: Grid,
+        target_grid: ConcreteSamplingGrid,
+        **kwargs: Any,
+    ) -> None:
+        self.cell_ids = cell_ids
+        self.healpix_grid = healpix_grid
+        self.target_grid = target_grid
 
-    # indices that correspond to the target cells
-    #
-    # searchsorted(a, b) returns insert indices that insert a into b, not search
-    # values from a in b. We thus need to mask all target cell ids not in the source.
-    valid = np.isin(target_cell_ids, source_cell_ids)
-    indices = np.searchsorted(source_cell_ids, target_cell_ids, side="left")
-    valid_indices = indices[valid]
+    def is_rgb(self, data: np.ndarray) -> bool:
+        """Whether the data is representing RGB(A)."""
+        return data.ndim == 2 and data.shape[-1] in (3, 4)
 
-    # actual interpolation
-    image = np.full(raw_shape, fill_value=background_value)
-    image[valid, ...] = data[valid_indices, ...]
+    def interpolate(
+        self, data: np.ndarray, background_value: float
+    ) -> NDArray[np.float64]:
+        """Interpolate data.
 
-    return np.reshape(image, shape)
+        Parameters
+        ----------
+        """
+        raise NotImplementedError
 
 
-def bilinear_resampling(
-    data: np.ndarray,
-    target_grid: ConcreteSamplingGrid,
-    source_cell_ids: np.ndarray,
-    params: HealpixGrid,
-) -> (np.ndarray, np.ndarray):
-    raise NotImplementedError
+class NearestInterpolator(Interpolator):
+    """Nearest interpolation."""
+
+    def interpolate(
+        self, data: np.ndarray, background_value: float
+    ) -> NDArray[np.float64]:
+        target_cell_ids = healpix_geo.auto.lonlat_to_healpix(
+            np.reshape(self.target_grid.x, -1),
+            np.reshape(self.target_grid.y, -1),
+            self.healpix_grid,
+        )
+
+        raw_shape = (target_cell_ids.size,)
+        shape = self.target_grid.shape
+        if self.is_rgb(data):
+            raw_shape += data.shape[-1:]
+            shape += data.shape[-1:]
+
+        # indices that correspond to the target cells
+        #
+        # searchsorted(a, b) returns insert indices that insert a into b, not search
+        # values from a in b. We thus need to mask all target cell ids not in the
+        # source.
+        valid = np.isin(target_cell_ids, self.cell_ids)
+        indices = np.searchsorted(self.cell_ids, target_cell_ids, side="left")
+        valid_indices = indices[valid]
+
+        # actual interpolation
+        image = np.full(raw_shape, fill_value=background_value, dtype=np.float64)
+        image[valid, ...] = data[valid_indices, ...]
+
+        return np.reshape(image, shape)
+
+
+class BilinearInterpolator(Interpolator):
+    """Bilinear interpolation. To implement."""
+
+    pass
+
+
+interpolators = {
+    "nearest": NearestInterpolator,
+    "bilinear": BilinearInterpolator,
+}
 
 
 def resample(
     cell_ids: np.ndarray,
     data: np.ndarray,
     *,
-    sampling_grid: SamplingGrid | SamplingGridParameters,
-    healpix_grid: HealpixGrid,
-    interpolation: Literal["nearest", "bilinear"],
-    agg: Literal["mean", "median", "std", "var", "min", "max", "first", "last"],
+    sampling_grid: SamplingGrid | BoxSamplingGridDict,
+    healpix_grid: Grid | Mapping,
+    interpolation: Interpolator | Literal["nearest", "bilinear"] = "nearest",
+    agg: AggType = "mean",
     background_value: float = np.nan,
-) -> np.ndarray:
-    # parameter validation
-    interpolation_methods = {
-        "nearest": nearest_neighbour_resampling,
-        "bilinear": bilinear_resampling,
-    }
-    interpolator = interpolation_methods.get(interpolation)
-    if interpolator is None:
-        raise ValueError(f"unknown interpolation method: {interpolation}")
+) -> tuple[ConcreteSamplingGrid, np.ndarray]:
+    """Resample from HEALPix to an equirectangular projection (regular lon/lat).
+
+    Parameters
+    ----------
+    cell_ids : array-like of int
+        The HEALPix cell indices, in the indexing scheme specified by `healpix_grid`.
+    data : array-like of float
+        The data to plot. Supported shapes are:
+
+        - (N): Scalar data mapped to colors
+        - (N, 3): RGB values (0-1 float)
+        - (N, 4): RGBA values (0-1 float)
+    sampling_grid : SamplingGrid or BoxSamplingGridDict
+        The target grid. Can be specified as a subclass of :class:`SamplingGrid` or
+        a mapping of parameters for :class:`BoxSamplingGrid`.
+    interpolation: {"nearest", "bilinear"}, default: "nearest"
+        The algorithm used to interpolate from healpix to the target grid. Available
+        values:
+
+        - ``"nearest"``: nearest-neighbour resampling
+        - ``"bilinear"``: bilinear resampling
+    agg : str, default: "mean"
+        Aggregation method to apply to HEALPix cells that fall into the same target
+        cell. Will be passed to `numpy_groupies.reduce`. Can be any of "mean", "median",
+        "std", "var", "min", "max", "first", "last".
+    background_value: float, default: numpy.nan
+        The background value for missing values.
+
+    Returns
+    -------
+    target_grid : ConcreteSamplingGrid
+        An object containing the coordinates of the target grid.
+    image : numpy.ndarray
+        The data projected unto the target grid.
+    """
+    if not isinstance(healpix_grid, Grid):
+        healpix_grid = Grid(**healpix_grid)
+    if not isinstance(sampling_grid, SamplingGrid):
+        sampling_grid = BoxSamplingGrid(**sampling_grid)
+
+    if data.ndim not in [1, 2] or data.shape[-1] not in [3, 4]:
+        raise ValueError(
+            f"Data should be shaped like (N), (N, 3), or (N, 4). Received {data.shape}."
+        )
+
+    if interpolation not in interpolators:
+        raise KeyError(
+            f"Unknown interpolation method: '{interpolation}'. "
+            f"Registered interpolators are {list(interpolators.keys())}"
+        )
+    interpolator_cls = interpolators[interpolation]
+
     # concrete sampling grid
-    if isinstance(sampling_grid, dict):
-        sampling_grid = ParametrizedSamplingGrid.from_dict(sampling_grid)
     target_grid = sampling_grid.resolve(cell_ids, healpix_grid)
 
     # deduplication
@@ -94,11 +165,10 @@ def resample(
     )
     deduplicated = numpy_groupies.aggregate(inverse_indices, data, func=agg, axis=0)
 
-    # interpolation
-    return target_grid, interpolator(
-        deduplicated,
-        target_grid,
-        source_cell_ids,
-        healpix_grid,
-        background_value=background_value,
+    interpolator = interpolator_cls(
+        source_cell_ids, healpix_grid=healpix_grid, target_grid=target_grid
     )
+    interpolated = interpolator.interpolate(
+        deduplicated, background_value=background_value
+    )
+    return target_grid, interpolated
