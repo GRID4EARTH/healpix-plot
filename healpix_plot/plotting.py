@@ -10,6 +10,7 @@ from cartopy.mpl.geoaxes import GeoAxes
 from healpix_geo.auto import Grid
 from matplotlib.axes import Axes
 from matplotlib.colors import Colormap, Norm
+from matplotlib.contour import QuadContourSet
 from matplotlib.image import AxesImage
 from numpy.typing import NDArray
 
@@ -200,3 +201,162 @@ def plot(
             getattr(ax, f"set_{axis}label")(axis_labels[axis])
 
     return mappable
+
+
+def imshow(
+    cell_ids: NDArray[np.integer],
+    data: np.ndarray,
+    *,
+    healpix_grid: Grid | Mapping,
+    sampling_grid: SamplingGrid | BoxSamplingGridDict,
+    interpolation: Literal["nearest", "bilinear"] = "nearest",
+    agg: AggType = "mean",
+    background_value: float = np.nan,
+    ax: Axes | None = None,
+    **kwargs: Any,
+) -> AxesImage:
+    """Resample HEALPix data and plot it using imshow.
+
+    Parameters
+    ----------
+    cell_ids : array-like of int
+        The HEALPix cell indices, in the indexing scheme specified by `healpix_grid`.
+    data : array-like of float
+        The data to plot. Supported shapes are:
+
+        - (N): Scalar data mapped to colors
+        - (N, 3): RGB values (0-1 float)
+        - (N, 4): RGBA values (0-1 float)
+    sampling_grid : SamplingGrid or mapping
+        The target grid.
+    agg : {"mean", "median", "std", "var", "min", "max", "first", "last"}, default: "mean"
+        Aggregation method to deduplicate the data.
+    background_value: float, default: numpy.nan
+        The background value for missing values.
+    ax : matplotlib.axes.Axes, optional
+        Matplotlib axes to plot unto. If left to None, the current axes is used.
+    kwargs :
+        Passed to :meth:`matplotlib.axes.Axes.imshow`.
+
+    Returns
+    -------
+    mappable: matplotlib.image.AxesImage
+    """
+    target_grid, image = resample(
+        cell_ids,
+        data,
+        healpix_grid=healpix_grid,
+        sampling_grid=sampling_grid,
+        interpolation=interpolation,
+        agg=agg,
+        background_value=background_value,
+    )
+
+    if ax is None:
+        ax = plt.gca()
+
+    kwargs: dict[str, Any] = {"interpolation": "nearest", "aspect": "auto"} | kwargs
+
+    return ax.imshow(image, extent=target_grid.extent, origin="lower", **kwargs)
+
+
+def contour(
+    cell_ids: NDArray[np.integer],
+    data: np.ndarray,
+    *,
+    healpix_grid: Grid | Mapping,
+    sampling_grid: SamplingGrid | BoxSamplingGridDict,
+    interpolation: Literal["nearest", "bilinear"] = "nearest",
+    agg: AggType = "mean",
+    background_value: float = np.nan,
+    ax: Axes | None = None,
+    **kwargs: Any,
+) -> QuadContourSet:
+    """Resample HEALPix data and plot contour lines.
+
+    Parameters
+    ----------
+    cell_ids : array-like of int
+        The HEALPix cell indices, in the indexing scheme specified by `healpix_grid`.
+    data : array-like of float
+        The data to plot.
+    sampling_grid : SamplingGrid or mapping
+        The target grid.
+    agg : {"mean", "median", "std", "var", "min", "max", "first", "last"}, default: "mean"
+        Aggregation method to deduplicate the data.
+    background_value: float, default: numpy.nan
+        The background value for missing values.
+    ax : matplotlib.axes.Axes, optional
+        Matplotlib axes to plot unto. If left to None, the current axes is used.
+    kwargs :
+        Passed to :meth:`matplotlib.axes.Axes.contour`.
+
+    Returns
+    -------
+    mappable: matplotlib.contour.QuadContourSet
+    """
+    target_grid, image = resample(
+        cell_ids,
+        data,
+        healpix_grid=healpix_grid,
+        sampling_grid=sampling_grid,
+        interpolation=interpolation,
+        agg=agg,
+        background_value=background_value,
+    )
+
+    if ax is None:
+        ax = plt.gca()
+
+    return ax.contour(target_grid.x, target_grid.y, image, **kwargs)
+
+
+def contourf(
+    cell_ids: np.ndarray,
+    data: np.ndarray,
+    *,
+    healpix_grid: Grid | Mapping,
+    sampling_grid: SamplingGrid | BoxSamplingGridDict,
+    interpolation: Literal["nearest", "bilinear"] = "nearest",
+    agg: AggType = "mean",
+    background_value: float = np.nan,
+    ax: Axes | None = None,
+    **kwargs: Any,
+) -> QuadContourSet:
+    """Resample HEALPix data and plot filled contour lines.
+
+    Parameters
+    ----------
+    cell_ids : array-like of int
+        The HEALPix cell indices, in the indexing scheme specified by `healpix_grid`.
+    data : array-like of float
+        The data to plot.
+    sampling_grid : SamplingGrid or mapping
+        The target grid.
+    agg : {"mean", "median", "std", "var", "min", "max", "first", "last"}, default: "mean"
+        Aggregation method to deduplicate the data.
+    background_value: float, default: numpy.nan
+        The background value for missing values.
+    ax : matplotlib.axes.Axes, optional
+        Matplotlib axes to plot unto. If left to None, the current axes is used.
+    kwargs :
+        Passed to :meth:`matplotlib.axes.Axes.contourf`.
+
+    Returns
+    -------
+    mappable: matplotlib.contour.QuadContourSet
+    """
+    target_grid, image = resample(
+        cell_ids,
+        data,
+        healpix_grid=healpix_grid,
+        sampling_grid=sampling_grid,
+        interpolation=interpolation,
+        agg=agg,
+        background_value=background_value,
+    )
+
+    if ax is None:
+        ax = plt.gca()
+
+    return ax.contourf(target_grid.x, target_grid.y, image, **kwargs)
