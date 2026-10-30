@@ -104,6 +104,41 @@ def resample(
     agg: AggType = "mean",
     background_value: float = np.nan,
 ) -> tuple[ConcreteSamplingGrid, np.ndarray]:
+    """Resample from HEALPix to an equirectangular projection (regular lon/lat).
+
+    Parameters
+    ----------
+    cell_ids : array-like of int
+        The HEALPix cell indices, in the indexing scheme specified by `healpix_grid`.
+    data : array-like of float
+        The data to plot. Supported shapes are:
+
+        - (N): Scalar data mapped to colors
+        - (N, 3): RGB values (0-1 float)
+        - (N, 4): RGBA values (0-1 float)
+    sampling_grid : SamplingGrid or BoxSamplingGridDict
+        The target grid. Can be specified as a subclass of :class:`SamplingGrid` or
+        a mapping of parameters for :class:`BoxSamplingGrid`.
+    interpolation: {"nearest", "bilinear"}, default: "nearest"
+        The algorithm used to interpolate from healpix to the target grid. Available
+        values:
+
+        - ``"nearest"``: nearest-neighbour resampling
+        - ``"bilinear"``: bilinear resampling
+    agg : str, default: "mean"
+        Aggregation method to apply to HEALPix cells that fall into the same target
+        cell. Will be passed to `numpy_groupies.reduce`. Can be any of "mean", "median",
+        "std", "var", "min", "max", "first", "last".
+    background_value: float, default: numpy.nan
+        The background value for missing values.
+
+    Returns
+    -------
+    target_grid : ConcreteSamplingGrid
+        An object containing the coordinates of the target grid.
+    image : numpy.ndarray
+        The data projected unto the target grid.
+    """
     if not isinstance(healpix_grid, Grid):
         healpix_grid = Grid(**healpix_grid)
     if not isinstance(sampling_grid, SamplingGrid):
