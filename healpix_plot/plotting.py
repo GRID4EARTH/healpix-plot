@@ -19,6 +19,11 @@ if TYPE_CHECKING:
     from matplotlib.norm import Norm
 
     from healpix_plot.sampling_grid import SamplingGrid, SamplingGridParameters
+from healpix_plot.sampling_grid import (
+    BoxSamplingGrid,
+    BoxSamplingGridDict,
+    SamplingGrid,
+)
 
 
 def plot(
@@ -26,7 +31,7 @@ def plot(
     data: np.ndarray,
     *,
     healpix_grid: HealpixGrid,
-    sampling_grid: SamplingGridParameters | SamplingGrid,
+    sampling_grid: SamplingGrid | BoxSamplingGridDict,
     projection: str | ccrs.CRS = "Mollweide",
     view: tuple[float, float, float, float] | None = None,
     agg: str = "mean",
@@ -124,10 +129,10 @@ def plot(
     ... )  # doctest: +ELLIPSIS
     <matplotlib.image.AxesImage at 0x...>
     """
-    if isinstance(sampling_grid, dict):
-        sampling_grid = ParametrizedSamplingGrid.from_dict(sampling_grid)
     if isinstance(healpix_grid, dict):
         healpix_grid = HealpixGrid(**healpix_grid)
+    if not isinstance(sampling_grid, SamplingGrid):
+        sampling_grid = BoxSamplingGrid(**sampling_grid)
 
     target_grid, image = resample(
         cell_ids,

@@ -1,21 +1,21 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from collections.abc import Mapping
+from typing import Literal
 
+import healpix_geo.auto
 import numpy as np
 import numpy_groupies
+from healpix_geo.auto import Grid
 
-from healpix_plot.sampling_grid import ParametrizedSamplingGrid
+from healpix_plot.sampling_grid import (
+    BoxSamplingGrid,
+    BoxSamplingGridDict,
+    ConcreteSamplingGrid,
+    SamplingGrid,
+)
 
-if TYPE_CHECKING:
-    from typing import Literal
-
-    from healpix_plot.healpix import HealpixGrid
-    from healpix_plot.sampling_grid import (
-        ConcreteSamplingGrid,
-        SamplingGrid,
-        SamplingGridParameters,
-    )
+AggType = Literal["mean", "median", "std", "var", "min", "max", "first", "last"]
 
 
 def is_rgb(x):
@@ -69,13 +69,16 @@ def resample(
     cell_ids: np.ndarray,
     data: np.ndarray,
     *,
-    sampling_grid: SamplingGrid | SamplingGridParameters,
     healpix_grid: HealpixGrid,
     interpolation: Literal["nearest", "bilinear"],
     agg: Literal["mean", "median", "std", "var", "min", "max", "first", "last"],
+    sampling_grid: SamplingGrid | BoxSamplingGridDict,
     background_value: float = np.nan,
 ) -> np.ndarray:
     # parameter validation
+    if not isinstance(sampling_grid, SamplingGrid):
+        sampling_grid = BoxSamplingGrid(**sampling_grid)
+
     interpolation_methods = {
         "nearest": nearest_neighbour_resampling,
         "bilinear": bilinear_resampling,
@@ -83,9 +86,8 @@ def resample(
     interpolator = interpolation_methods.get(interpolation)
     if interpolator is None:
         raise ValueError(f"unknown interpolation method: {interpolation}")
+
     # concrete sampling grid
-    if isinstance(sampling_grid, dict):
-        sampling_grid = ParametrizedSamplingGrid.from_dict(sampling_grid)
     target_grid = sampling_grid.resolve(cell_ids, healpix_grid)
 
     # deduplication
