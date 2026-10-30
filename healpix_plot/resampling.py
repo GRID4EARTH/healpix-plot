@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Literal
+from typing import Any, Literal
 
 import healpix_geo.auto
 import numpy as np
 import numpy_groupies
 from healpix_geo.auto import Grid
+from numpy.typing import NDArray
 
 from healpix_plot.sampling_grid import (
     BoxSamplingGrid,
@@ -18,74 +19,107 @@ from healpix_plot.sampling_grid import (
 AggType = Literal["mean", "median", "std", "var", "min", "max", "first", "last"]
 
 
-def is_rgb(x):
-    return x.ndim == 2 and x.shape[-1] in (3, 4)
+class Interpolator:
+    """Abstract class for interpolating data from HEALPix to regular grid."""
+
+    def __init__(
+        self,
+        cell_ids: NDArray[np.integer],
+        healpix_grid: Grid,
+        target_grid: ConcreteSamplingGrid,
+        **kwargs: Any,
+    ) -> None:
+        self.cell_ids = cell_ids
+        self.healpix_grid = healpix_grid
+        self.target_grid = target_grid
+
+    def is_rgb(self, data: np.ndarray) -> bool:
+        """Whether the data is representing RGB(A)."""
+        return data.ndim == 2 and data.shape[-1] in (3, 4)
+
+    def interpolate(
+        self, data: np.ndarray, background_value: float
+    ) -> NDArray[np.float64]:
+        """Interpolate data.
+
+        Parameters
+        ----------
+        """
+        raise NotImplementedError
 
 
-def nearest_neighbour_resampling(
-    data: np.ndarray,
-    target_grid: ConcreteSamplingGrid,
-    source_cell_ids: np.ndarray,
-    healpix_grid: Grid,
-    background_value: float,
-) -> (np.ndarray, np.ndarray):
-    target_cell_ids = healpix_geo.auto.lonlat_to_healpix(
-        np.reshape(target_grid.x, -1), np.reshape(target_grid.y, -1), healpix_grid
-    )
+class NearestInterpolator(Interpolator):
+    """Nearest interpolation."""
 
-    raw_shape = (target_cell_ids.size,)
-    shape = target_grid.shape
-    if is_rgb(data):
-        raw_shape += data.shape[-1:]
-        shape += data.shape[-1:]
+    def interpolate(
+        self, data: np.ndarray, background_value: float
+    ) -> NDArray[np.float64]:
+        target_cell_ids = healpix_geo.auto.lonlat_to_healpix(
+            np.reshape(self.target_grid.x, -1),
+            np.reshape(self.target_grid.y, -1),
+            self.healpix_grid,
+        )
 
-    # indices that correspond to the target cells
-    #
-    # searchsorted(a, b) returns insert indices that insert a into b, not search
-    # values from a in b. We thus need to mask all target cell ids not in the source.
-    valid = np.isin(target_cell_ids, source_cell_ids)
-    indices = np.searchsorted(source_cell_ids, target_cell_ids, side="left")
-    valid_indices = indices[valid]
+        raw_shape = (target_cell_ids.size,)
+        shape = self.target_grid.shape
+        if self.is_rgb(data):
+            raw_shape += data.shape[-1:]
+            shape += data.shape[-1:]
 
-    # actual interpolation
-    image = np.full(raw_shape, fill_value=background_value)
-    image[valid, ...] = data[valid_indices, ...]
+        # indices that correspond to the target cells
+        #
+        # searchsorted(a, b) returns insert indices that insert a into b, not search
+        # values from a in b. We thus need to mask all target cell ids not in the
+        # source.
+        valid = np.isin(target_cell_ids, self.cell_ids)
+        indices = np.searchsorted(self.cell_ids, target_cell_ids, side="left")
+        valid_indices = indices[valid]
 
-    return np.reshape(image, shape)
+        # actual interpolation
+        image = np.full(raw_shape, fill_value=background_value, dtype=np.float64)
+        image[valid, ...] = data[valid_indices, ...]
+
+        return np.reshape(image, shape)
 
 
-def bilinear_resampling(
-    data: np.ndarray,
-    target_grid: ConcreteSamplingGrid,
-    source_cell_ids: np.ndarray,
-) -> (np.ndarray, np.ndarray):
-    healpix_grid: Grid,
-    raise NotImplementedError
+class BilinearInterpolator(Interpolator):
+    """Bilinear interpolation. To implement."""
+
+    pass
+
+
+interpolators = {
+    "nearest": NearestInterpolator,
+    "bilinear": BilinearInterpolator,
+}
 
 
 def resample(
     cell_ids: np.ndarray,
     data: np.ndarray,
     *,
-    interpolation: Literal["nearest", "bilinear"],
-    agg: Literal["mean", "median", "std", "var", "min", "max", "first", "last"],
     sampling_grid: SamplingGrid | BoxSamplingGridDict,
     healpix_grid: Grid | Mapping,
+    interpolation: Interpolator | Literal["nearest", "bilinear"] = "nearest",
+    agg: AggType = "mean",
     background_value: float = np.nan,
-) -> np.ndarray:
-
+) -> tuple[ConcreteSamplingGrid, np.ndarray]:
     if not isinstance(healpix_grid, Grid):
         healpix_grid = Grid(**healpix_grid)
     if not isinstance(sampling_grid, SamplingGrid):
         sampling_grid = BoxSamplingGrid(**sampling_grid)
 
-    interpolation_methods = {
-        "nearest": nearest_neighbour_resampling,
-        "bilinear": bilinear_resampling,
-    }
-    interpolator = interpolation_methods.get(interpolation)
-    if interpolator is None:
-        raise ValueError(f"unknown interpolation method: {interpolation}")
+    if data.ndim not in [1, 2] or data.shape[-1] not in [3, 4]:
+        raise ValueError(
+            f"Data should be shaped like (N), (N, 3), or (N, 4). Received {data.shape}."
+        )
+
+    if interpolation not in interpolators:
+        raise KeyError(
+            f"Unknown interpolation method: '{interpolation}'. "
+            f"Registered interpolators are {list(interpolators.keys())}"
+        )
+    interpolator_cls = interpolators[interpolation]
 
     # concrete sampling grid
     target_grid = sampling_grid.resolve(cell_ids, healpix_grid)
@@ -96,11 +130,10 @@ def resample(
     )
     deduplicated = numpy_groupies.aggregate(inverse_indices, data, func=agg, axis=0)
 
-    # interpolation
-    return target_grid, interpolator(
-        deduplicated,
-        target_grid,
-        source_cell_ids,
-        healpix_grid,
-        background_value=background_value,
+    interpolator = interpolator_cls(
+        source_cell_ids, healpix_grid=healpix_grid, target_grid=target_grid
     )
+    interpolated = interpolator.interpolate(
+        deduplicated, background_value=background_value
+    )
+    return target_grid, interpolated
