@@ -117,13 +117,11 @@ def plot(
     ...     level=4,
     ...     indexing_scheme="nested",
     ... )
-    >>> cell_ids = np.arange(12 * 4 ** healpix_grid.level, dtype="uint64")
+    >>> cell_ids = np.arange(12 * 4**healpix_grid.level, dtype="uint64")
 
     Create the data:
 
-    >>> lon, lat = healpix_geo.auto.healpix_to_lonlat(
-    ...     cell_ids, healpix_grid
-    ... )
+    >>> lon, lat = healpix_geo.auto.healpix_to_lonlat(cell_ids, healpix_grid)
     >>> data = np.cos(8 * np.deg2rad(lon)) * np.sin(4 * np.deg2rad(lat))
 
     Plot the data
