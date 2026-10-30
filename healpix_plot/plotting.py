@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 import numpy as np
+from healpix_geo.auto import Grid
 
-from healpix_plot.healpix import HealpixGrid
 from healpix_plot.resampling import resample
 from healpix_plot.sampling_grid import ParametrizedSamplingGrid
 
@@ -30,7 +30,7 @@ def plot(
     cell_ids: np.ndarray,
     data: np.ndarray,
     *,
-    healpix_grid: HealpixGrid,
+    healpix_grid: Grid | Mapping,
     sampling_grid: SamplingGrid | BoxSamplingGridDict,
     projection: str | ccrs.CRS = "Mollweide",
     view: tuple[float, float, float, float] | None = None,
@@ -129,10 +129,10 @@ def plot(
     ... )  # doctest: +ELLIPSIS
     <matplotlib.image.AxesImage at 0x...>
     """
-    if isinstance(healpix_grid, dict):
-        healpix_grid = HealpixGrid(**healpix_grid)
     if not isinstance(sampling_grid, SamplingGrid):
         sampling_grid = BoxSamplingGrid(**sampling_grid)
+    if not isinstance(healpix_grid, Grid):
+        healpix_grid = Grid(**healpix_grid)
 
     target_grid, image = resample(
         cell_ids,
@@ -156,7 +156,7 @@ def plot(
             layout="constrained",
         )
 
-    if cell_ids.size == 12 * 4**healpix_grid.level:
+    if healpix_grid.level is not None and cell_ids.size == 12 * 4**healpix_grid.level:
         ax.set_global()
     elif view is not None:
         ax.set_extent(view, crs=ccrs.PlateCarree())

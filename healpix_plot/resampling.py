@@ -26,13 +26,11 @@ def nearest_neighbour_resampling(
     data: np.ndarray,
     target_grid: ConcreteSamplingGrid,
     source_cell_ids: np.ndarray,
-    params: HealpixGrid,
+    healpix_grid: Grid,
     background_value: float,
 ) -> (np.ndarray, np.ndarray):
-    target_cell_ids = params.operations.lonlat_to_healpix(
-        np.reshape(target_grid.x, -1),
-        np.reshape(target_grid.y, -1),
-        **params.as_keyword_params(),
+    target_cell_ids = healpix_geo.auto.lonlat_to_healpix(
+        np.reshape(target_grid.x, -1), np.reshape(target_grid.y, -1), healpix_grid
     )
 
     raw_shape = (target_cell_ids.size,)
@@ -60,8 +58,8 @@ def bilinear_resampling(
     data: np.ndarray,
     target_grid: ConcreteSamplingGrid,
     source_cell_ids: np.ndarray,
-    params: HealpixGrid,
 ) -> (np.ndarray, np.ndarray):
+    healpix_grid: Grid,
     raise NotImplementedError
 
 
@@ -69,13 +67,15 @@ def resample(
     cell_ids: np.ndarray,
     data: np.ndarray,
     *,
-    healpix_grid: HealpixGrid,
     interpolation: Literal["nearest", "bilinear"],
     agg: Literal["mean", "median", "std", "var", "min", "max", "first", "last"],
     sampling_grid: SamplingGrid | BoxSamplingGridDict,
+    healpix_grid: Grid | Mapping,
     background_value: float = np.nan,
 ) -> np.ndarray:
-    # parameter validation
+
+    if not isinstance(healpix_grid, Grid):
+        healpix_grid = Grid(**healpix_grid)
     if not isinstance(sampling_grid, SamplingGrid):
         sampling_grid = BoxSamplingGrid(**sampling_grid)
 
